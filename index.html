@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محلل الرخصة المهنية - الأستاذ أبو بسام</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f0fdf4; color: #1e293b; margin: 0; padding: 0; }
+        .glass-card { background: white; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #dcfce7; }
+        /* اللون الأخضر القياسي */
+        .hero-gradient { background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); }
+        
+        .input-field { 
+            width: 70px; height: 40px; border: 2px solid #cbd5e1; border-radius: 10px; 
+            text-align: center; font-weight: 700; font-size: 16px; transition: all 0.3s ease; background: #fff;
+        }
+        .input-field:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
+        
+        .input-field.total { border-color: #94a3b8; color: #334155; background: #f8fafc; }
+        .input-field.correct { border-color: #10b981; color: #065f46; }
+        .input-field.wrong { border-color: #ef4444; color: #991b1b; }
+
+        .chart-box { position: relative; height: 110px; width: 110px; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+        .chart-text { position: absolute; font-weight: 900; font-size: 14px; z-index: 10; color: #065f46; }
+        .hidden-step { display: none !important; }
+        
+        #reportModal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: none; overflow-y: auto; padding: 20px; backdrop-filter: blur(5px); }
+        #reportInner { background: white; width: 100%; max-width: 950px; margin: 20px auto; border-radius: 20px; padding: 40px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+
+        .btn-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 15px -3px rgba(16, 185, 129, 0.2); }
+        
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            #reportInner { box-shadow: none !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+<!-- نافذة التقرير -->
+<div id="reportModal">
+    <div id="reportInner">
+        <div class="flex justify-between items-center mb-8 border-b pb-4 no-print">
+            <h3 class="text-2xl font-black text-slate-800">التقرير الفني المتكامل (نسخة قياس)</h3>
+            <div class="flex gap-3">
+                <button onclick="printReport()" class="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                    طباعة التقرير / حفظ PDF
+                </button>
+                <button onclick="closeReport()" class="px-6 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all">إغلاق</button>
+            </div>
+        </div>
+        <div id="finalReportContent"></div>
+    </div>
+</div>
+
+<!-- الشاشة الترحيبية -->
+<div id="welcome-screen" class="max-w-4xl mx-auto pt-20 px-6">
+    <div class="text-center mb-16">
+        <div class="inline-block p-4 bg-emerald-100 rounded-full mb-6">
+            <svg class="w-16 h-16 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <h1 class="text-5xl font-black text-slate-900 mb-4 tracking-tight">محلل نتائج الرخصة المهنية</h1>
+        <p class="text-xl text-emerald-600 font-bold italic">تصميم وإشراف: الأستاذ أبو بسام</p>
+    </div>
+
+    <div id="level-selection" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div onclick="selectLevel('lvl1')" class="glass-card p-12 text-center cursor-pointer border-b-8 border-emerald-500 btn-hover transition-all">
+            <h2 class="text-3xl font-black text-slate-800">رياضيات (1)</h2>
+            <p class="text-slate-500 mt-3 text-lg">المرحلة الابتدائية</p>
+        </div>
+        <div onclick="showLvl2Options()" class="glass-card p-12 text-center cursor-pointer border-b-8 border-emerald-700 btn-hover transition-all">
+            <h2 class="text-3xl font-black text-slate-800">رياضيات (2)</h2>
+            <p class="text-slate-500 mt-3 text-lg">المتوسط والثانوي</p>
+        </div>
+    </div>
+
+    <div id="lvl2-options" class="hidden-step grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div onclick="selectLevel('lvl2_standard')" class="glass-card p-10 text-center cursor-pointer border-b-8 border-emerald-500 btn-hover transition-all">
+            <h2 class="text-2xl font-black text-slate-800">المشروع القياسي</h2>
+            <p class="text-slate-500 mt-2">6 معايير (الإصدار المعتمد)</p>
+        </div>
+        <div onclick="selectLevel('lvl2_detailed')" class="glass-card p-10 text-center cursor-pointer border-b-8 border-teal-600 btn-hover transition-all">
+            <h2 class="text-2xl font-black text-slate-800">المشروع التفصيلي</h2>
+            <p class="text-slate-500 mt-2">9 معايير (تحليل شامل)</p>
+        </div>
+        <button onclick="hideLvl2Options()" class="md:col-span-2 text-emerald-700 font-bold underline mt-4">عودة للخلف</button>
+    </div>
+</div>
+
+<!-- التطبيق الرئيسي -->
+<div id="main-app" class="hidden-step max-w-7xl mx-auto py-10 px-4">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-white p-6 rounded-2xl shadow-sm gap-4 border-r-8 border-emerald-600">
+        <div>
+            <h2 id="levelTitle" class="text-3xl font-black text-slate-800">--</h2>
+            <p class="text-emerald-600 text-sm mt-1 font-bold italic">نظام التحليل الرقمي المتوافق مع معايير قياس</p>
+        </div>
+        <button onclick="goBack()" class="px-6 py-2 bg-slate-800 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-slate-700 transition-all">العودة للرئيسية</button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 space-y-6">
+            <div class="glass-card overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[700px]">
+                        <thead class="bg-emerald-50 text-emerald-800">
+                            <tr>
+                                <th class="p-4 text-right font-bold">المعيار</th>
+                                <th class="p-4 text-center font-bold">الأسئلة</th>
+                                <th class="p-4 text-center font-bold text-emerald-600">صحيح</th>
+                                <th class="p-4 text-center font-bold text-rose-500">خطأ</th>
+                                <th class="p-4 text-center font-bold">متبقي</th>
+                                <th class="p-4 text-center font-bold text-emerald-700">الإتقان</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableRows"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="chartsGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <div class="lg:col-span-1">
+            <div class="sticky top-6 space-y-6">
+                <div class="hero-gradient rounded-3xl p-8 text-white text-center shadow-2xl relative overflow-hidden">
+                    <div class="relative z-10">
+                        <div class="text-lg opacity-80 mb-4">الدرجة الموزونة المتوقعة</div>
+                        <div class="relative w-44 h-44 mx-auto mb-6 flex items-center justify-center">
+                            <canvas id="mainChart"></canvas>
+                            <div id="finalScoreText" class="absolute text-4xl font-black">0%</div>
+                        </div>
+                        <div id="finalStatus" class="inline-block px-8 py-3 bg-white/20 rounded-2xl font-black text-xl mb-2">--</div>
+                        <div id="statusComment" class="text-sm opacity-90 font-medium px-4 h-12">ابدأ بإدخال بياناتك...</div>
+                    </div>
+                </div>
+                <button onclick="openReport()" class="w-full py-5 bg-emerald-600 text-white rounded-2xl font-black shadow-xl hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 text-xl">استخراج التقرير الفني</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const configs = {
+        lvl1: { 
+            title: "رياضيات 1 (الابتدائي)", 
+            items: [
+                {n:"الأعداد والعمليات", w:12, q:11}, {n:"الجبر والدوال", w:32, q:12}, {n:"الهندسة والقياس", w:26, q:19}, 
+                {n:"الإحصاء والاحتمالات", w:12, q:8}, {n:"المنطق والاستدلال", w:8, q:4}, {n:"الإجراءات الرياضية", w:10, q:6}
+            ] 
+        },
+        lvl2_standard: { 
+            title: "رياضيات 2 (المشروع القياسي)", 
+            items: [
+                {n:"الأعداد والعمليات", w:12, q:8}, 
+                {n:"الجبر والدوال والتحليل الرياضي", w:32, q:19}, 
+                {n:"الهندسة والقياس", w:26, q:15}, 
+                {n:"الإحصاء والاحتمالات", w:12, q:9}, 
+                {n:"المنطق والاستدلال الرياضي وتعليم الرياضيات", w:8, q:5}, 
+                {n:"الإجراءات الرياضية", w:10, q:4}
+            ] 
+        },
+        lvl2_detailed: { 
+            title: "رياضيات 2 (المشروع التفصيلي)", 
+            items: [
+                {n:"الأعداد والعمليات", w:12, q:9}, {n:"الجبر والدوال الحقيقية", w:20, q:15}, {n:"التحليل الرياضي", w:12, q:9},
+                {n:"الهندسة", w:18, q:14}, {n:"القياس", w:8, q:6}, {n:"الإحصاء والاحتمالات", w:12, q:9},
+                {n:"المنطق والاستدلال الرياضي", w:6, q:4}, {n:"تعلم الرياضيات", w:4, q:4}, {n:"الإجراءات الرياضية", w:8, q:6}
+            ] 
+        }
+    };
+
+    let currentData = [];
+    let charts = [];
+    let mainChartObj = null;
+
+    function showLvl2Options() {
+        document.getElementById('level-selection').classList.add('hidden-step');
+        document.getElementById('lvl2-options').classList.remove('hidden-step');
+    }
+    function hideLvl2Options() {
+        document.getElementById('lvl2-options').classList.add('hidden-step');
+        document.getElementById('level-selection').classList.remove('hidden-step');
+    }
+    function goBack() {
+        document.getElementById('main-app').classList.add('hidden-step');
+        document.getElementById('welcome-screen').classList.remove('hidden-step');
+    }
+
+    function selectLevel(key) {
+        currentData = JSON.parse(JSON.stringify(configs[key].items)).map(i => ({...i, correct: 0, wrong: 0, p: 0}));
+        document.getElementById('welcome-screen').classList.add('hidden-step');
+        document.getElementById('main-app').classList.remove('hidden-step');
+        document.getElementById('levelTitle').innerText = configs[key].title;
+        renderApp();
+    }
+
+    function renderApp() {
+        const rows = document.getElementById('tableRows');
+        const grid = document.getElementById('chartsGrid');
+        
+        rows.innerHTML = currentData.map((d, i) => `
+            <tr class="border-b border-emerald-50 hover:bg-emerald-50/50 transition-colors">
+                <td class="p-4">
+                    <div class="font-bold text-slate-800 text-sm">${d.n}</div>
+                    <div class="text-[10px] text-emerald-600 font-bold">الوزن: ${d.w}%</div>
+                </td>
+                <td class="p-4 text-center">
+                    <input type="number" class="input-field total" value="${d.q}" 
+                           oninput="updateVal(${i}, 'total', this.value)">
+                </td>
+                <td class="p-4 text-center">
+                    <input type="number" class="input-field correct" placeholder="0" 
+                           oninput="updateVal(${i}, 'correct', this.value)">
+                </td>
+                <td class="p-4 text-center">
+                    <input type="number" class="input-field wrong" placeholder="0" 
+                           oninput="updateVal(${i}, 'wrong', this.value)">
+                </td>
+                <td class="p-4 text-center font-bold text-slate-400" id="rem-${i}">${d.q}</td>
+                <td class="p-4 text-center font-black text-emerald-700 text-lg" id="perc-${i}">${d.p}%</td>
+            </tr>
+        `).join('');
+
+        grid.innerHTML = currentData.map((d, i) => `
+            <div class="glass-card p-4 text-center border-t-4 border-emerald-600">
+                <div class="chart-box">
+                    <canvas id="canvas-${i}"></canvas>
+                    <div class="chart-text" id="perc-text-${i}">${d.p}%</div>
+                </div>
+                <div class="text-[10px] font-black mt-2 text-emerald-900 h-8 flex items-center justify-center leading-tight">${d.n}</div>
+            </div>
+        `).join('');
+
+        currentData.forEach((d, i) => {
+            const ctx = document.getElementById(`canvas-${i}`).getContext('2d');
+            charts[i] = new Chart(ctx, {
+                type: 'doughnut',
+                data: { datasets: [{ data: [d.p, 100 - d.p], backgroundColor: ['#059669', '#f1f5f9'], borderWidth: 0, cutout: '75%' }] },
+                options: { animation: false, responsive: true, maintainAspectRatio: false, plugins: { legend: false, tooltip: false } }
+            });
+        });
+
+        const mCtx = document.getElementById('mainChart').getContext('2d');
+        if(mainChartObj) mainChartObj.destroy();
+        mainChartObj = new Chart(mCtx, {
+            type: 'doughnut',
+            data: { datasets: [{ data: [0, 100], backgroundColor: ['#fff', 'rgba(255,255,255,0.2)'], borderWidth: 0, cutout: '85%' }] },
+            options: { animation: false, responsive: true, maintainAspectRatio: false, plugins: { legend: false, tooltip: false } }
+        });
+    }
+
+    function updateVal(idx, type, val) {
+        let v = parseInt(val) || 0;
+        let d = currentData[idx];
+        if (type === 'total') d.q = v;
+        if (type === 'correct') d.correct = v;
+        if (type === 'wrong') d.wrong = v;
+        if (d.correct + d.wrong > d.q) {
+             if(type === 'correct') d.correct = d.q - d.wrong;
+             else if(type === 'wrong') d.wrong = d.q - d.correct;
+        }
+        d.p = d.q > 0 ? Math.round((d.correct / d.q) * 100) : 0;
+        document.getElementById(`rem-${idx}`).innerText = Math.max(0, d.q - (d.correct + d.wrong));
+        document.getElementById(`perc-${idx}`).innerText = d.p + "%";
+        document.getElementById(`perc-text-${idx}`).innerText = d.p + "%";
+        charts[idx].data.datasets[0].data = [d.p, 100 - d.p];
+        charts[idx].update('none');
+        updateTotal();
+    }
+
+    function getStatus(p) {
+        if(p >= 80) return {label: 'خبير', desc: 'إتقان عالي جداً للمهارات والمفاهيم الرياضية الأساسية والمتقدمة وفق معايير قياس.', color: '#059669'};
+        if(p >= 70) return {label: 'متقدم', desc: 'إتقان متميز للمهارات مع قدرة عالية على التحليل والربط الرياضي.', color: '#10b981'};
+        if(p >= 50) return {label: 'ممارس', desc: 'إتقان جيد للمهارات، يوصى بالتركيز على المجالات التي سجلت إتقاناً أقل.', color: '#f59e0b'};
+        return {label: 'غير مجتاز', desc: 'يحتاج المتدرب إلى خطة علاجية مكثفة لرفع كفاءة المعايير والمؤشرات الرياضية.', color: '#ef4444'};
+    }
+
+    function updateTotal() {
+        let score = 0;
+        currentData.forEach(d => { score += (d.p/100) * d.w; });
+        score = Math.round(score);
+        document.getElementById('finalScoreText').innerText = score + "%";
+        const st = getStatus(score);
+        document.getElementById('finalStatus').innerText = st.label;
+        document.getElementById('statusComment').innerText = st.desc;
+        mainChartObj.data.datasets[0].data = [score, 100 - score];
+        mainChartObj.update('none');
+    }
+
+    function closeReport() { document.getElementById('reportModal').style.display = 'none'; }
+
+    async function openReport() {
+        const scoreVal = parseInt(document.getElementById('finalScoreText').innerText);
+        const st = getStatus(scoreVal);
+        const title = document.getElementById('levelTitle').innerText;
+        
+        // تحويل الرسوم البيانية لصور لاستخدامها في التقرير
+        const chartImages = [];
+        for(let i=0; i<currentData.length; i++) {
+            chartImages.push(document.getElementById(`canvas-${i}`).toDataURL('image/png'));
+        }
+        const mainChartImg = document.getElementById('mainChart').toDataURL('image/png');
+
+        const strengths = currentData.filter(d => d.p >= 80);
+        const weaknesses = currentData.filter(d => d.p < 60);
+
+        let gridHTML = currentData.map((d, i) => `
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; text-align: center; background: #fff;">
+                <div style="position: relative; width: 80px; height: 80px; margin: 0 auto;">
+                    <img src="${chartImages[i]}" style="width: 80px; height: 80px;" />
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 900; font-size: 12px; color: #065f46;">${d.p}%</div>
+                </div>
+                <div style="font-size: 10px; font-weight: bold; margin-top: 5px; color: #1e293b; line-height: 1.2;">${d.n}</div>
+            </div>
+        `).join('');
+
+        let tableRows = currentData.map(d => `
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 10px; font-weight: bold; text-align: right; font-size: 13px;">${d.n}</td>
+                <td style="padding: 10px; text-align: center;">${d.q}</td>
+                <td style="padding: 10px; text-align: center; color: #059669;">${d.correct}</td>
+                <td style="padding: 10px; text-align: center; color: #dc2626;">${d.wrong}</td>
+                <td style="padding: 10px; text-align: center; font-weight: 900; color: #065f46;">${d.p}%</td>
+            </tr>
+        `).join('');
+
+        const reportHTML = `
+            <div id="printArea" dir="rtl" style="font-family: 'Cairo', sans-serif; color: #1e293b; line-height: 1.6;">
+                <!-- رأس التقرير -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 5px solid #065f46; padding-bottom: 15px; margin-bottom: 25px;">
+                    <div>
+                        <h1 style="margin: 0; color: #065f46; font-size: 26px; font-weight: 900;">التقرير الفني لتحليل نتائج الرخصة المهنية</h1>
+                        <p style="margin: 5px 0; color: #10b981; font-weight: bold; font-size: 18px;">${title}</p>
+                    </div>
+                    <div style="text-align: left;">
+                        <p style="margin: 0; font-size: 12px; color: #64748b;">تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-SA')}</p>
+                        <p style="margin: 0; font-size: 14px; font-weight: bold; color: #ef4444;">* نموذج محاكاة تقريبي لنتائج قياس</p>
+                    </div>
+                </div>
+
+                <!-- ملخص النتيجة والتمثيل البياني -->
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; background: #f0fdf4; padding: 25px; border-radius: 20px; border: 2px solid #bcf0da; margin-bottom: 30px; align-items: center;">
+                    <div style="text-align: center; border-left: 2px solid #bcf0da; position: relative;">
+                        <div style="position: relative; width: 150px; height: 150px; margin: 0 auto;">
+                            <img src="${mainChartImg}" style="width: 150px; height: 150px;" />
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                                <div style="font-size: 32px; font-weight: 900; color: #064e3b;">${scoreVal}%</div>
+                                <div style="font-size: 10px; color: #065f46; font-weight: bold; margin-top: -5px;">موزونة</div>
+                            </div>
+                        </div>
+                        <div style="display: inline-block; padding: 6px 20px; background: #065f46; color: white; border-radius: 10px; font-weight: bold; font-size: 16px; margin-top: 10px;">${st.label}</div>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 10px 0; font-size: 18px; color: #064e3b;">التحليل النوعي للأداء:</h4>
+                        <p style="margin: 0; font-size: 15px; color: #374151; text-align: justify;">${st.desc}</p>
+                    </div>
+                </div>
+
+                <!-- شبكة الرسوم البيانية لكل معيار -->
+                <h4 style="margin: 0 0 15px 0; border-right: 5px solid #10b981; padding-right: 12px; color: #064e3b;">التمثيل البياني لمستويات الإتقان:</h4>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px;">
+                    ${gridHTML}
+                </div>
+
+                <div style="page-break-before: always;"></div>
+
+                <!-- جدول التفاصيل الرقمية -->
+                <h4 style="margin: 20px 0 10px 0; border-right: 5px solid #10b981; padding-right: 12px; color: #064e3b;">البيانات التفصيلية للمعايير:</h4>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; border-radius: 12px; overflow: hidden; border: 1px solid #eee;">
+                    <thead style="background: #065f46; color: white;">
+                        <tr>
+                            <th style="padding: 12px; text-align: right; font-size: 13px;">المعيار الرئيسي</th>
+                            <th style="padding: 12px; text-align: center; font-size: 13px;">الأسئلة</th>
+                            <th style="padding: 12px; text-align: center; font-size: 13px;">صحيح</th>
+                            <th style="padding: 12px; text-align: center; font-size: 13px;">خطأ</th>
+                            <th style="padding: 12px; text-align: center; font-size: 13px;">نسبة الإتقان</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
+
+                <!-- التحليل الذكي -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                    <div style="background: #f0fdf4; border: 1px solid #10b981; border-radius: 15px; padding: 20px;">
+                        <h5 style="margin: 0 0 10px 0; color: #065f46; font-size: 16px;">🟢 نقاط التميز:</h5>
+                        <ul style="margin: 0; padding-right: 20px; font-size: 13px; color: #064e3b;">
+                            ${strengths.length ? strengths.map(s => `<li style="margin-bottom: 5px;">${s.n}</li>`).join('') : '<li>لا توجد معايير في منطقة التميز حالياً.</li>'}
+                        </ul>
+                    </div>
+                    <div style="background: #fff1f2; border: 1px solid #ef4444; border-radius: 15px; padding: 20px;">
+                        <h5 style="margin: 0 0 10px 0; color: #991b1b; font-size: 16px;">🔴 خطة التطوير (التركيز):</h5>
+                        <ul style="margin: 0; padding-right: 20px; font-size: 13px; color: #991b1b;">
+                            ${weaknesses.length ? weaknesses.map(w => `<li style="margin-bottom: 5px;">${w.n}</li>`).join('') : '<li>أداء متوازن، استمر في المراجعة العامة.</li>'}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- التوصيات الفنية -->
+                <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border-right: 8px solid #065f46; margin-bottom: 40px;">
+                    <h5 style="margin: 0 0 10px 0; color: #1e293b; font-size: 18px;">التوصيات المهنية:</h5>
+                    <p style="margin: 0; font-size: 14px; color: #475569; text-align: justify;">
+                        بناءً على نتائج هذا التحليل، نوصي بالتركيز المكثف على <b>${weaknesses.length ? weaknesses[0].n : 'كافة جوانب المقرر'}</b>، 
+                        مع مراجعة استراتيجيات الحل السريع وضمان دقة الفهم للمؤشرات ذات الوزن النسبي الأعلى. 
+                        ننصح بإعادة إجراء الاختبار التجريبي بعد أسبوعين من خطة المذاكرة العلاجية.
+                    </p>
+                </div>
+
+                <!-- تذييل التقرير الرسمي -->
+                <div style="text-align: center; border-top: 2px dashed #065f46; padding-top: 20px;">
+                    <div style="font-weight: 900; color: #065f46; font-size: 18px;">تصميم وتنفيذ: الأستاذ أبو بسام</div>
+                    <div style="font-size: 14px; color: #064e3b; margin-top: 5px; font-weight: bold;">خبير معايير الرخصة المهنية - محلل نظم الأداء التعليمي</div>
+                </div>
+            </div>
+        `;
+        document.getElementById('finalReportContent').innerHTML = reportHTML;
+        document.getElementById('reportModal').style.display = 'block';
+    }
+
+    function printReport() {
+        const content = document.getElementById('finalReportContent').innerHTML;
+        const printWindow = window.open('', '_blank', 'width=1100,height=900');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>تقرير الرخصة المهنية - الأستاذ أبو بسام</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+                    <style>
+                        body { font-family: 'Cairo', sans-serif; padding: 30px; background: #fff; }
+                        @media print { 
+                            body { padding: 0; } 
+                            .page-break { page-break-before: always; }
+                        }
+                    </style>
+                </head>
+                <body dir="rtl">
+                    ${content}
+                    <script>
+                        window.onload = function() {
+                            setTimeout(() => {
+                                window.print();
+                                window.onafterprint = function() { window.close(); };
+                            }, 800);
+                        };
+                    <\/script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+</script>
+</body>
+</html>
+
